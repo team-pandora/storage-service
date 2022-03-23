@@ -16,6 +16,7 @@
     "prettier:fix": "prettier --config .prettierrc.js 'src/**/*.ts' --write",
     "clean": "rimraf dist"
   },
+  "author": "Maya Fisher",
   "license": "ISC",
   "dependencies": {
     "@types/mongodb": "^4.0.7",

@@ -5,7 +5,7 @@ import storageRouter from './storage/router';
 
 const appRouter = Router();
 
-appRouter.use('/api', storageRouter);
+appRouter.use('/api/storage', storageRouter);
 
 appRouter.use('/isAlive', (_req, res) => {
     res.status(StatusCodes.OK).send('alive');

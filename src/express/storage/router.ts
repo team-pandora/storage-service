@@ -1,17 +1,29 @@
 import { Router } from 'express';
 import { wrapController } from '../../utils/express';
 import ValidateRequest from '../../utils/joi';
-import { CopyBucketKeySchema, BucketKeySchema } from './validator.schema';
 import FeatureController from './controller';
+import { DeleteSchema, CopySchema, DefaultSchema } from './validator.schema';
 
 const featureRouter: Router = Router();
 
-featureRouter.post('/upload', wrapController(FeatureController.uploadFile));
+featureRouter.post(
+    '/bucket/:bucket/key/:key',
+    ValidateRequest(DefaultSchema),
+    wrapController(FeatureController.uploadFile),
+);
 
-featureRouter.get('/download', ValidateRequest(BucketKeySchema), wrapController(FeatureController.downloadFile));
+featureRouter.get(
+    '/bucket/:bucket/key/:key',
+    ValidateRequest(DefaultSchema),
+    wrapController(FeatureController.downloadFile),
+);
 
-featureRouter.delete('/delete', ValidateRequest(BucketKeySchema), wrapController(FeatureController.deleteFile));
+featureRouter.delete('/bucket/:bucket', ValidateRequest(DeleteSchema), wrapController(FeatureController.deleteFile));
 
-featureRouter.post('/copy', ValidateRequest(CopyBucketKeySchema), wrapController(FeatureController.copyFile));
+featureRouter.copy(
+    '/bucket/:sourceBucket/key/:sourceKey/:newKey',
+    ValidateRequest(CopySchema),
+    wrapController(FeatureController.copyFile),
+);
 
 export default featureRouter;
