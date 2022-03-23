@@ -1,112 +1,72 @@
 import * as Busboy from 'busboy';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import * as Minio from 'minio';
+import * as Utils from '../../utils/utils';
 import { ServerError } from '../error';
+import * as StorageManager from './manager';
 
-const minioClient = new Minio.Client({
-    endPoint: 'localhost',
-    port: 9000,
-    useSSL: false,
-    accessKey: 'minio',
-    secretKey: 'minio123',
-    partSize: 10 * 1024 * 1024,
-});
+// eslint-disable-next-line no-console
+console.log(Utils.default.generateKey());
 
-const upload = async (req: Request, res: Response) => {
+const uploadFile = async (req: Request, res: Response) => {
+    let bucket: string = '';
+    const keys: any = [];
+
     // Await for the file to be sent to minio
     await new Promise((resolve, reject) => {
         const busboy = Busboy({ headers: req.headers });
+        const fileUploads: Promise<any>[] = [];
         const fields: any = {};
 
         busboy.on('field', (fieldName, val) => {
             fields[fieldName] = val;
         });
 
-        busboy.on('file', async (_fieldname, file, _filename, _encoding, _mimetype) => {
-            const { bucket, key } = fields;
-            if (!bucket || !key) {
-                reject(new ServerError(StatusCodes.BAD_REQUEST, 'Bucket and key must be provided before file'));
-            }
-
-            await minioClient.makeBucket(bucket, '').catch((err) => {
-                if (err.code !== 'BucketAlreadyOwnedByYou') {
-                    reject(new ServerError(StatusCodes.INTERNAL_SERVER_ERROR, 'Error creating bucket', err));
-                }
-            });
-
-            await minioClient
-                .putObject(bucket, key, file, file.size, { 'Content-Type': 'multipart/form-data' })
-                .catch((err) => {
-                    reject(new ServerError(StatusCodes.INTERNAL_SERVER_ERROR, 'Error uploading file, Minio', err));
-                });
+        busboy.on('file', (_, file) => {
+            bucket = fields.bucket;
+            const key = Utils.default.generateKey();
+            fileUploads.push(StorageManager.handleUploadFile(bucket, key, file).catch(reject));
+            keys.push(key);
         });
 
         busboy.on('error', (err) => {
             reject(new ServerError(StatusCodes.INTERNAL_SERVER_ERROR, 'Error uploading file, Busboy', err));
         });
 
-        busboy.on('finish', resolve);
-
+        busboy.on('finish', () => {
+            Promise.all(fileUploads).then(resolve).catch(reject);
+        });
         req.pipe(busboy);
     });
 
-    res.status(StatusCodes.OK).send('OK');
+    res.status(StatusCodes.OK).send({ bucket, keys });
 };
 
-// const upload = async (req: Request, res: Response) => {
-//     const busboy = Busboy({ headers: req.headers });
-//     const requiredFields = ['bucket', 'key'];
-//     const fields: any = {};
-
-//     // Create promises for each required field
-//     const fieldPromises = requiredFields.map((field) => {
-//         return new Promise<void>((resolve) => {
-//             busboy.on('field', (key, value) => {
-//                 if (key === field) {
-//                     fields[field] = value;
-//                     resolve();
-//                 }
-//             });
-//         });
-//     });
-
-//     // Await for the file to be sent to minio
-//     await new Promise((resolve, reject) => {
-//         busboy.on('file', async (_fieldname, file, _filename, _encoding, _mimetype) => {
-//             // Await all required fields to be set TODO: handle not provided fields
-//             await Promise.all(fieldPromises);
-//             const { bucket, key } = fields;
-
-//             await minioClient.makeBucket(bucket, '').catch((err) => {
-//                 if (err.code !== 'BucketAlreadyOwnedByYou') {
-//                     reject(new ServerError(StatusCodes.INTERNAL_SERVER_ERROR, 'Error creating bucket', err));
-//                 }
-//             });
-
-//             await minioClient
-//                 .putObject(bucket, key, file, file.size, { 'Content-Type': 'multipart/form-data' })
-//                 .catch((err) => {
-//                     reject(new ServerError(StatusCodes.INTERNAL_SERVER_ERROR, 'Error uploading file, Minio', err));
-//                 });
-//         });
-
-//         busboy.on('error', (err) => {
-//             reject(new ServerError(StatusCodes.INTERNAL_SERVER_ERROR, 'Error uploading file, Busboy', err));
-//         });
-
-//         busboy.on('finish', resolve);
-
-//         req.pipe(busboy);
-//     });
-
-//     res.status(StatusCodes.OK).send('OK');
-// };
-
-async function download(req: Request, res: Response) {
+const downloadFile = async (req: Request, res: Response) => {
     const { bucket, key } = req.body;
-    const result = await minioClient.getObject(bucket, key);
-    result.pipe(res);
-}
+    StorageManager.validateBucketKey(bucket, key);
 
-export default { upload, download };
+    const stream = await StorageManager.handleDownloadFile(bucket, key);
+    stream.pipe(res);
+};
+
+const deleteFile = async (req: Request, res: Response) => {
+    const { bucket, key } = req.body;
+    StorageManager.validateBucketKey(bucket, key);
+
+    if (typeof key === 'object') await StorageManager.handleDeleteFiles(bucket, key);
+    else await StorageManager.handleDeleteFile(bucket, key);
+
+    res.status(StatusCodes.OK).send({ message: 'File deleted', bucket, key });
+};
+
+const copyFile = async (req: Request, res: Response) => {
+    const { sourceBucket, sourceKey } = req.body;
+    StorageManager.validateBucketKey(sourceBucket, sourceKey);
+
+    const newKey = Utils.default.generateKey();
+    await StorageManager.handleCopyFile(sourceBucket, sourceKey, newKey);
+    res.status(StatusCodes.OK).send({ sourceBucket, newKey });
+};
+
+export default { uploadFile, downloadFile, deleteFile, copyFile };
