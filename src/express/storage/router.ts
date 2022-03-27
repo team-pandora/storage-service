@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { wrapController } from '../../utils/express';
 import ValidateRequest from '../../utils/joi';
 import FeatureController from './controller';
-import { DeleteSchema, CopySchema, DefaultSchema } from './validator.schema';
+import { CopySchema, DefaultSchema, DeleteSchema } from './validator.schema';
 
 const featureRouter: Router = Router();
 

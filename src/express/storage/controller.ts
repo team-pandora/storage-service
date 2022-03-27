@@ -5,7 +5,6 @@ import { ServerError } from '../error';
 import * as StorageManager from './manager';
 
 const uploadFile = async (req: Request, res: Response) => {
-    const keys: any = [];
     const { bucket, key } = req.params;
 
     // Await for the file to be sent to minio
@@ -19,7 +18,6 @@ const uploadFile = async (req: Request, res: Response) => {
 
         busboy.on('file', (_, file) => {
             fileUploads.push(StorageManager.handleUploadFile(bucket, key, file).catch(reject));
-            keys.push(key);
         });
 
         busboy.on('error', (err) => {
@@ -32,7 +30,7 @@ const uploadFile = async (req: Request, res: Response) => {
         req.pipe(busboy);
     });
 
-    res.status(StatusCodes.OK).send({ bucket, keys });
+    res.status(StatusCodes.OK).send({ bucket, key });
 };
 
 const downloadFile = async (req: Request, res: Response) => {
