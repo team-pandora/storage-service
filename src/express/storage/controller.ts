@@ -7,57 +7,70 @@ import * as StorageManager from './manager';
 const uploadFile = async (req: Request, res: Response) => {
     const { bucket, key } = req.params;
 
-    // Await for the file to be sent to minio
-    await new Promise((resolve, reject) => {
+    const result = await new Promise((resolve, reject) => {
         const busboy = Busboy({ headers: req.headers });
-        const fileUploads: Promise<any>[] = [];
+        let fileUpload: Promise<{
+            bucket: string;
+            key: string;
+        }>;
 
-        busboy.on('field', (_fieldName, _val) => {
-            // add validation that no parameters has been sent
+        busboy.on('file', (field, file) => {
+            if (field === 'file' && !fileUpload) {
+                fileUpload = StorageManager.uploadFile(bucket, key, file);
+            } else {
+                file.resume();
+            }
         });
 
-        busboy.on('file', (_, file) => {
-            fileUploads.push(StorageManager.handleUploadFile(bucket, key, file).catch(reject));
-        });
-
-        busboy.on('error', (err) => {
-            reject(new ServerError(StatusCodes.INTERNAL_SERVER_ERROR, 'Error uploading file, Busboy', err));
+        busboy.on('error', (err: any) => {
+            reject(new ServerError(StatusCodes.INTERNAL_SERVER_ERROR, `Error uploading file, ${err.message}`, err));
         });
 
         busboy.on('finish', () => {
-            Promise.all(fileUploads).then(resolve).catch(reject);
+            if (!fileUpload) reject(new ServerError(StatusCodes.BAD_REQUEST, 'No file provided'));
+            else fileUpload.then(resolve).catch(reject);
         });
+
         req.pipe(busboy);
     });
 
-    res.status(StatusCodes.OK).send({ bucket, key });
+    res.status(StatusCodes.OK).send(result);
 };
 
 const downloadFile = async (req: Request, res: Response) => {
     const { bucket, key } = req.params;
-    StorageManager.validateBucketKey(bucket, key);
+    const fileStream = await StorageManager.downloadFile(bucket, key);
 
-    const stream = await StorageManager.handleDownloadFile(bucket, key);
-    stream.pipe(res);
+    fileStream.pipe(res);
+
+    // Await the stream to finish
+    await new Promise((resolve, reject) => {
+        fileStream.on('end', resolve);
+        fileStream.on('error', reject);
+    });
 };
 
-const deleteFile = async (req: Request, res: Response) => {
-    const { key } = req.body;
-    const { bucket } = req.params;
-    StorageManager.validateBucketKey(bucket, key);
-
-    if (typeof key === 'object') await StorageManager.handleDeleteFiles(bucket, key);
-    else await StorageManager.handleDeleteFile(bucket, key);
-
-    res.status(StatusCodes.OK).send({ bucket, key });
+const deleteFiles = async (req: Request, res: Response) => {
+    const result = await StorageManager.deleteFiles(req.params.bucket, req.body.key);
+    res.status(StatusCodes.OK).send(result);
 };
 
 const copyFile = async (req: Request, res: Response) => {
-    const { sourceBucket, sourceKey, newKey } = req.params;
-    StorageManager.validateBucketKey(sourceBucket, sourceKey);
-
-    await StorageManager.handleCopyFile(sourceBucket, sourceKey, newKey);
-    res.status(StatusCodes.OK).send({ sourceBucket, newKey });
+    const { sourceBucket, sourceKey, newBucket, newKey } = req.body;
+    const result = await StorageManager.copyFile(sourceBucket, sourceKey, newBucket, newKey);
+    res.status(StatusCodes.OK).send(result);
 };
 
-export default { uploadFile, downloadFile, deleteFile, copyFile };
+const fileExists = async (req: Request, res: Response) => {
+    const { bucket, key } = req.params;
+    const result = await StorageManager.fileExists(bucket, key);
+    res.status(StatusCodes.OK).send(result);
+};
+
+const statFile = async (req: Request, res: Response) => {
+    const { bucket, key } = req.params;
+    const result = await StorageManager.statFile(bucket, key);
+    res.status(StatusCodes.OK).send(result);
+};
+
+export default { uploadFile, downloadFile, deleteFiles, copyFile, fileExists, statFile };

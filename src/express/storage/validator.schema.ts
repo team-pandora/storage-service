@@ -3,7 +3,7 @@ import { JoiMongoObjectId } from '../../utils/joi';
 
 const DeleteSchema = Joi.object({
     body: {
-        key: Joi.alternatives(JoiMongoObjectId.required(), Joi.array().items(JoiMongoObjectId.required())).required(),
+        key: Joi.array().items(JoiMongoObjectId.required()).min(1).required(),
     },
     query: {},
     params: {
@@ -21,13 +21,14 @@ const DefaultSchema = Joi.object({
 });
 
 const CopySchema = Joi.object({
-    body: {},
-    query: {},
-    params: {
+    body: {
         sourceBucket: JoiMongoObjectId.required(),
         sourceKey: JoiMongoObjectId.required(),
+        newBucket: JoiMongoObjectId.required(),
         newKey: JoiMongoObjectId.required(),
     },
+    query: {},
+    params: {},
 });
 
 export { DeleteSchema, CopySchema, DefaultSchema };

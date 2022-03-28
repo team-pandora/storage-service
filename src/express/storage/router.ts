@@ -18,12 +18,20 @@ featureRouter.get(
     wrapController(FeatureController.downloadFile),
 );
 
-featureRouter.delete('/bucket/:bucket', ValidateRequest(DeleteSchema), wrapController(FeatureController.deleteFile));
+featureRouter.delete('/bucket/:bucket', ValidateRequest(DeleteSchema), wrapController(FeatureController.deleteFiles));
 
-featureRouter.copy(
-    '/bucket/:sourceBucket/key/:sourceKey/:newKey',
-    ValidateRequest(CopySchema),
-    wrapController(FeatureController.copyFile),
+featureRouter.post('/copy', ValidateRequest(CopySchema), wrapController(FeatureController.copyFile));
+
+featureRouter.get(
+    '/exists/bucket/:bucket/key/:key',
+    ValidateRequest(DefaultSchema),
+    wrapController(FeatureController.fileExists),
+);
+
+featureRouter.get(
+    '/stat/bucket/:bucket/key/:key',
+    ValidateRequest(DefaultSchema),
+    wrapController(FeatureController.statFile),
 );
 
 export default featureRouter;
