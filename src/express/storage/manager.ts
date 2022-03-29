@@ -28,6 +28,7 @@ const deleteFiles = async (bucket: string, keys: string[]) => {
 };
 
 const copyFile = async (sourceBucket: string, sourceKey: string, newBucket: string, newKey: string) => {
+    await ensureBucket(newBucket);
     await minioClient.copyObject(newBucket, newKey, `${sourceBucket}/${sourceKey}`, minioConds).catch(handleMinioError);
     return { bucket: newBucket, key: newKey };
 };

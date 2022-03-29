@@ -3,14 +3,7 @@ import config from '../../config';
 
 const { minio } = config;
 
-const minioClient = new Minio.Client({
-    endPoint: minio.endpoint,
-    port: minio.port,
-    useSSL: minio.useSSL,
-    accessKey: minio.accessKey,
-    secretKey: minio.secretKey,
-    partSize: minio.partSize,
-});
+const minioClient = new Minio.Client(minio);
 
 const minioConds = new Minio.CopyConditions();
 

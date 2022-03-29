@@ -7,7 +7,7 @@ const config = {
         useCors: env.get('USE_CORS').default('false').asBool(),
     },
     minio: {
-        endpoint: env.get('MINIO_ENDPOINT').default('localhost').required().asString(),
+        endPoint: env.get('MINIO_ENDPOINT').default('localhost').required().asString(),
         port: env.get('MINIO_PORT').default(9000).asPortNumber(),
         accessKey: env.get('MINIO_ACCESS_KEY').default('minio').required().asString(),
         secretKey: env.get('MINIO_SECRET_KEY').default('minio123').required().asString(),
