@@ -25,14 +25,11 @@ jobs:
     needs:
       - lint
 
-    services:
-      mongo:
-        image: mongo
-        ports:
-          - 27017:27017
-
     steps:
       - uses: actions/checkout@v2
+
+      - name: lunch minio
+        run: docker run -d -p 9000:9000 -e "MINIO_ACCESS_KEY=minio" -e "MINIO_SECRET_KEY=minio123" minio/minio server /data
 
       - name: test
         run: |

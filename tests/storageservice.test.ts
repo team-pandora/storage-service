@@ -4,10 +4,6 @@ import Server from '../src/express/server';
 import * as StorageManager from '../src/express/storage/manager';
 
 jest.setTimeout(30000);
-const bucketId = 'dd6eb23d7d977568c854b326';
-const KeyId = 'ab6eb23d7d977568c854b326';
-const newBucket = 'f56eb23d7d977568c854b326';
-const newKey = 'a56eb23d7d977568c854b326';
 
 describe('Storage Service', () => {
     let app: Express.Application;
@@ -15,6 +11,11 @@ describe('Storage Service', () => {
     beforeEach(async () => {
         app = Server.createExpressApp();
     });
+
+    const bucketId = 'dd6eb23d7d977568c854b326';
+    const KeyId = 'ab6eb23d7d977568c854b326';
+    const newBucket = 'f56eb23d7d977568c854b326';
+    const newKey = 'a56eb23d7d977568c854b326';
 
     afterEach(async () => {
         StorageManager.deleteFiles(bucketId, [KeyId]);
