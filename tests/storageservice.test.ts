@@ -32,7 +32,7 @@ describe('Storage Service', () => {
             });
             it('should fail uploading file', async () => {
                 const result = await request(app).post(`/api/storage/bucket/${bucketId}/key/${KeyId}`);
-                expect(result.status).toEqual(500);
+                expect(result.status).toEqual(400);
             });
         });
 

@@ -1,6 +1,8 @@
 import * as Busboy from 'busboy';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import * as stream from 'stream';
+import { promisify } from 'util';
 import { ServerError } from '../error';
 import * as StorageManager from './manager';
 
@@ -43,11 +45,7 @@ const downloadFile = async (req: Request, res: Response) => {
 
     fileStream.pipe(res);
 
-    // Await the stream to finish
-    await new Promise((resolve, reject) => {
-        fileStream.on('end', resolve);
-        fileStream.on('error', reject);
-    });
+    await promisify(stream.finished)(fileStream);
 };
 
 const deleteFiles = async (req: Request, res: Response) => {
@@ -73,4 +71,4 @@ const statFile = async (req: Request, res: Response) => {
     res.status(StatusCodes.OK).send(result);
 };
 
-export default { uploadFile, downloadFile, deleteFiles, copyFile, fileExists, statFile };
+export { uploadFile, downloadFile, deleteFiles, copyFile, fileExists, statFile };
