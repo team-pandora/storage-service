@@ -1,14 +1,15 @@
 import * as Joi from 'joi';
 import { JoiMongoObjectId } from '../../utils/joi';
 
-const DeleteSchema = Joi.object({
-    body: {
-        key: Joi.array().items(JoiMongoObjectId.required()).min(1).required(),
-    },
+const UploadSchema = Joi.object({
+    headers: Joi.object({
+        'content-type': Joi.string()
+            .regex(/.*multipart\/form-data.*/)
+            .required(),
+    }).unknown(),
+    body: {},
     query: {},
-    params: {
-        bucket: JoiMongoObjectId.required(),
-    },
+    params: { bucket: JoiMongoObjectId.required(), key: JoiMongoObjectId.required() },
 });
 
 const DefaultSchema = Joi.object({
@@ -17,6 +18,16 @@ const DefaultSchema = Joi.object({
     params: {
         bucket: JoiMongoObjectId.required(),
         key: JoiMongoObjectId.required(),
+    },
+});
+
+const DeleteSchema = Joi.object({
+    body: {
+        key: Joi.array().items(JoiMongoObjectId.required()).min(1).required(),
+    },
+    query: {},
+    params: {
+        bucket: JoiMongoObjectId.required(),
     },
 });
 
@@ -31,4 +42,4 @@ const CopySchema = Joi.object({
     params: {},
 });
 
-export { DeleteSchema, CopySchema, DefaultSchema };
+export { UploadSchema, DefaultSchema, DeleteSchema, CopySchema };
