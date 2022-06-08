@@ -12,28 +12,28 @@ const ensureBucket = async (bucket: string) => {
     });
 };
 
-const uploadFile = async (bucket: string, key: string, file: string | internal.Readable | Buffer) => {
+export const uploadFile = async (bucket: string, key: string, file: string | internal.Readable | Buffer) => {
     await ensureBucket(bucket);
     await minioClient.putObject(bucket, key, file).catch(handleMinioError);
     return { bucket, key };
 };
 
-const downloadFile = async (bucket: string, key: string) => {
+export const downloadFile = async (bucket: string, key: string) => {
     return minioClient.getObject(bucket, key).catch(handleMinioError);
 };
 
-const deleteFiles = async (bucket: string, keys: string[]) => {
+export const deleteFiles = async (bucket: string, keys: string[]) => {
     await minioClient.removeObjects(bucket, keys).catch(handleMinioError);
     return { bucket, keys };
 };
 
-const copyFile = async (sourceBucket: string, sourceKey: string, newBucket: string, newKey: string) => {
+export const copyFile = async (sourceBucket: string, sourceKey: string, newBucket: string, newKey: string) => {
     await ensureBucket(newBucket);
     await minioClient.copyObject(newBucket, newKey, `${sourceBucket}/${sourceKey}`, minioConds).catch(handleMinioError);
     return { bucket: newBucket, key: newKey };
 };
 
-const fileExists = async (bucket: string, key: string) => {
+export const fileExists = async (bucket: string, key: string) => {
     const result = await minioClient
         .statObject(bucket, key)
         .then(() => true)
@@ -44,8 +44,6 @@ const fileExists = async (bucket: string, key: string) => {
     return result;
 };
 
-const statFile = async (bucket: string, key: string) => {
+export const statFile = async (bucket: string, key: string) => {
     return minioClient.statObject(bucket, key).catch(handleMinioError);
 };
-
-export { uploadFile, downloadFile, deleteFiles, copyFile, fileExists, statFile };

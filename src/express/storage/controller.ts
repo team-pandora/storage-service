@@ -18,7 +18,7 @@ const uploadFile = async (req: Request, res: Response) => {
 
         busboy.on('file', (field, file) => {
             if (field === 'file' && !fileUpload) {
-                fileUpload = StorageManager.uploadFile(bucket, key, file);
+                fileUpload = StorageManager.uploadFile(bucket, key, file).catch(reject) as typeof fileUpload;
             } else {
                 file.resume();
             }
