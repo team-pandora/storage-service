@@ -73,6 +73,6 @@ export const statFile = async (req: Request, res: Response) => {
 };
 
 export const deleteFile = async (req: Request, res: Response) => {
-    const result = await StorageManager.deleteFile(req.params.bucketName, req.body.objectName);
+    const result = await StorageManager.deleteFile(req.params.bucketName, req.params.objectName);
     res.status(StatusCodes.OK).send(result);
 };
