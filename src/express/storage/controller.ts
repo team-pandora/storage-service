@@ -14,6 +14,7 @@ export const uploadFile = async (req: Request, res: Response) => {
         let fileUpload: Promise<{
             bucketName: string;
             objectName: string;
+            size: number;
         }>;
 
         busboy.on('file', (field, file) => {
