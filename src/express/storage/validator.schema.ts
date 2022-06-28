@@ -1,45 +1,52 @@
 import * as Joi from 'joi';
 import { JoiMongoObjectId } from '../../utils/joi';
 
-const UploadSchema = Joi.object({
+export const UploadSchema = Joi.object({
     headers: Joi.object({
         'content-type': Joi.string()
             .regex(/.*multipart\/form-data.*/)
             .required(),
     }).unknown(),
-    body: {},
     query: {},
-    params: { bucket: JoiMongoObjectId.required(), key: JoiMongoObjectId.required() },
+    params: { bucketName: JoiMongoObjectId.required(), objectName: JoiMongoObjectId.required() },
+    body: {},
 });
 
-const DefaultSchema = Joi.object({
-    body: {},
+export const DefaultSchema = Joi.object({
     query: {},
     params: {
-        bucket: JoiMongoObjectId.required(),
-        key: JoiMongoObjectId.required(),
+        bucketName: JoiMongoObjectId.required(),
+        objectName: JoiMongoObjectId.required(),
     },
+    body: {},
 });
 
-const DeleteSchema = Joi.object({
-    body: {
-        key: Joi.array().items(JoiMongoObjectId.required()).min(1).required(),
-    },
+export const DeleteFilesSchema = Joi.object({
     query: {},
     params: {
-        bucket: JoiMongoObjectId.required(),
+        bucketName: JoiMongoObjectId.required(),
+    },
+    body: {
+        objectsList: Joi.array().items(JoiMongoObjectId.required()).min(1).required(),
     },
 });
 
-const CopySchema = Joi.object({
-    body: {
-        sourceBucket: JoiMongoObjectId.required(),
-        sourceKey: JoiMongoObjectId.required(),
-        newBucket: JoiMongoObjectId.required(),
-        newKey: JoiMongoObjectId.required(),
-    },
+export const CopySchema = Joi.object({
     query: {},
     params: {},
+    body: {
+        bucketName: JoiMongoObjectId.required(),
+        objectName: JoiMongoObjectId.required(),
+        sourceBucket: JoiMongoObjectId.required(),
+        sourceObject: JoiMongoObjectId.required(),
+    },
 });
 
-export { UploadSchema, DefaultSchema, DeleteSchema, CopySchema };
+export const DeleteFileSchema = Joi.object({
+    query: {},
+    params: {
+        bucketName: JoiMongoObjectId.required(),
+        objectName: JoiMongoObjectId.required(),
+    },
+    body: {},
+});

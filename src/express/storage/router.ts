@@ -7,35 +7,41 @@ import * as ValidatorSchemas from './validator.schema';
 const featureRouter: Router = Router();
 
 featureRouter.post(
-    '/bucket/:bucket/key/:key',
+    '/bucketName/:bucketName/objectName/:objectName',
     ValidateRequest(ValidatorSchemas.UploadSchema),
     wrapController(FeatureController.uploadFile),
 );
 
 featureRouter.get(
-    '/bucket/:bucket/key/:key',
+    '/bucketName/:bucketName/objectName/:objectName',
     ValidateRequest(ValidatorSchemas.DefaultSchema),
     wrapController(FeatureController.downloadFile),
 );
 
 featureRouter.delete(
-    '/bucket/:bucket',
-    ValidateRequest(ValidatorSchemas.DeleteSchema),
+    '/bucketName/:bucketName',
+    ValidateRequest(ValidatorSchemas.DeleteFilesSchema),
     wrapController(FeatureController.deleteFiles),
 );
 
 featureRouter.post('/copy', ValidateRequest(ValidatorSchemas.CopySchema), wrapController(FeatureController.copyFile));
 
 featureRouter.get(
-    '/exists/bucket/:bucket/key/:key',
+    '/exists/bucketName/:bucketName/objectName/:objectName',
     ValidateRequest(ValidatorSchemas.DefaultSchema),
     wrapController(FeatureController.fileExists),
 );
 
 featureRouter.get(
-    '/stat/bucket/:bucket/key/:key',
+    '/stat/bucketName/:bucketName/objectName/:objectName',
     ValidateRequest(ValidatorSchemas.DefaultSchema),
     wrapController(FeatureController.statFile),
+);
+
+featureRouter.delete(
+    '/bucketName/:bucketName/objectName/:objectName',
+    ValidateRequest(ValidatorSchemas.DeleteFileSchema),
+    wrapController(FeatureController.deleteFile),
 );
 
 export default featureRouter;
