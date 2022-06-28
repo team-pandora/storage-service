@@ -1,52 +1,55 @@
 import * as Joi from 'joi';
-import { JoiMongoObjectId } from '../../utils/joi';
+import { JoiObjectId } from '../../utils/joi';
 
-export const UploadSchema = Joi.object({
+const objectActionParamsSchema = Joi.object({
+    bucketName: Joi.string().required(),
+    objectName: JoiObjectId.required(),
+});
+
+export const UploadFileRequestSchema = Joi.object({
     headers: Joi.object({
         'content-type': Joi.string()
             .regex(/.*multipart\/form-data.*/)
             .required(),
     }).unknown(),
     query: {},
-    params: { bucketName: JoiMongoObjectId.required(), objectName: JoiMongoObjectId.required() },
+    params: objectActionParamsSchema,
     body: {},
 });
 
-export const DefaultSchema = Joi.object({
+export const FileExistsRequestSchema = Joi.object({
     query: {},
-    params: {
-        bucketName: JoiMongoObjectId.required(),
-        objectName: JoiMongoObjectId.required(),
-    },
+    params: objectActionParamsSchema,
     body: {},
 });
 
-export const DeleteFilesSchema = Joi.object({
+export const DeleteFilesRequestSchema = Joi.object({
     query: {},
     params: {
-        bucketName: JoiMongoObjectId.required(),
+        bucketName: JoiObjectId.required(),
     },
     body: {
-        objectsList: Joi.array().items(JoiMongoObjectId.required()).min(1).required(),
+        objectNames: Joi.array().items(JoiObjectId.required()).min(1).required(),
     },
 });
 
-export const CopySchema = Joi.object({
+export const CopyFileRequestSchema = Joi.object({
     query: {},
-    params: {},
+    params: objectActionParamsSchema,
     body: {
-        bucketName: JoiMongoObjectId.required(),
-        objectName: JoiMongoObjectId.required(),
-        sourceBucket: JoiMongoObjectId.required(),
-        sourceObject: JoiMongoObjectId.required(),
+        newBucketName: JoiObjectId.required(),
+        newObjectName: JoiObjectId.required(),
     },
 });
 
-export const DeleteFileSchema = Joi.object({
+export const DeleteFileRequestSchema = Joi.object({
     query: {},
-    params: {
-        bucketName: JoiMongoObjectId.required(),
-        objectName: JoiMongoObjectId.required(),
-    },
+    params: objectActionParamsSchema,
+    body: {},
+});
+
+export const StatFileRequestSchema = Joi.object({
+    query: {},
+    params: objectActionParamsSchema,
     body: {},
 });

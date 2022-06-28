@@ -7,41 +7,45 @@ import * as ValidatorSchemas from './validator.schema';
 const featureRouter: Router = Router();
 
 featureRouter.post(
-    '/bucketName/:bucketName/objectName/:objectName',
-    ValidateRequest(ValidatorSchemas.UploadSchema),
+    '/bucket/:bucketName/object/:objectName',
+    ValidateRequest(ValidatorSchemas.UploadFileRequestSchema),
     wrapController(FeatureController.uploadFile),
 );
 
 featureRouter.get(
-    '/bucketName/:bucketName/objectName/:objectName',
-    ValidateRequest(ValidatorSchemas.DefaultSchema),
+    '/bucket/:bucketName/object/:objectName',
+    ValidateRequest(ValidatorSchemas.FileExistsRequestSchema),
     wrapController(FeatureController.downloadFile),
 );
 
 featureRouter.delete(
-    '/bucketName/:bucketName',
-    ValidateRequest(ValidatorSchemas.DeleteFilesSchema),
+    '/bucket/:bucketName/object/:objectName',
+    ValidateRequest(ValidatorSchemas.DeleteFileRequestSchema),
+    wrapController(FeatureController.deleteFile),
+);
+
+featureRouter.delete(
+    '/bucket/:bucketName',
+    ValidateRequest(ValidatorSchemas.DeleteFilesRequestSchema),
     wrapController(FeatureController.deleteFiles),
 );
 
-featureRouter.post('/copy', ValidateRequest(ValidatorSchemas.CopySchema), wrapController(FeatureController.copyFile));
+featureRouter.post(
+    '/bucket/:bucketName/object/:objectName/copy',
+    ValidateRequest(ValidatorSchemas.CopyFileRequestSchema),
+    wrapController(FeatureController.copyFile),
+);
 
 featureRouter.get(
-    '/exists/bucketName/:bucketName/objectName/:objectName',
-    ValidateRequest(ValidatorSchemas.DefaultSchema),
+    '/bucket/:bucketName/object/:objectName/exists',
+    ValidateRequest(ValidatorSchemas.FileExistsRequestSchema),
     wrapController(FeatureController.fileExists),
 );
 
 featureRouter.get(
-    '/stat/bucketName/:bucketName/objectName/:objectName',
-    ValidateRequest(ValidatorSchemas.DefaultSchema),
+    '/bucket/:bucketName/object/:objectName/stat',
+    ValidateRequest(ValidatorSchemas.StatFileRequestSchema),
     wrapController(FeatureController.statFile),
-);
-
-featureRouter.delete(
-    '/bucketName/:bucketName/objectName/:objectName',
-    ValidateRequest(ValidatorSchemas.DeleteFileSchema),
-    wrapController(FeatureController.deleteFile),
 );
 
 export default featureRouter;

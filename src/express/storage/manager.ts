@@ -28,17 +28,30 @@ export const downloadFile = async (bucketName: string, objectName: string) => {
     return minioClient.getObject(bucketName, objectName).catch(handleMinioError);
 };
 
-export const deleteFiles = async (bucketName: string, objectsList: string[]) => {
-    await minioClient.removeObjects(bucketName, objectsList).catch(handleMinioError);
-    return { bucketName, objectsList };
+export const deleteFile = async (bucketName: string, objectName: string) => {
+    await minioClient.removeObject(bucketName, objectName).catch(handleMinioError);
+    return { bucketName, objectName };
 };
 
-export const copyFile = async (bucketName: string, objectName: string, sourceBucket: string, sourceObject: string) => {
-    await ensureBucket(bucketName);
+export const deleteFiles = async (bucketName: string, objectNames: string[]) => {
+    await minioClient.removeObjects(bucketName, objectNames).catch(handleMinioError);
+    return { bucketName, objectNames };
+};
+
+export const copyFile = async (
+    sourceBucketName: string,
+    sourceObjectName: string,
+    destBucketName: string,
+    destObjectName: string,
+) => {
+    await ensureBucket(sourceBucketName);
+    await ensureBucket(destBucketName);
+
     await minioClient
-        .copyObject(bucketName, objectName, `${sourceBucket}/${sourceObject}`, minioConds)
+        .copyObject(destBucketName, destObjectName, `${sourceBucketName}/${sourceObjectName}`, minioConds)
         .catch(handleMinioError);
-    return { bucketName, objectName };
+
+    return { bucketName: destBucketName, objectName: destObjectName };
 };
 
 export const fileExists = async (bucketName: string, objectName: string) => {
@@ -54,9 +67,4 @@ export const fileExists = async (bucketName: string, objectName: string) => {
 
 export const statFile = async (bucketName: string, objectName: string) => {
     return minioClient.statObject(bucketName, objectName).catch(handleMinioError);
-};
-
-export const deleteFile = async (bucketName: string, objectName: string) => {
-    await minioClient.removeObject(bucketName, objectName).catch(handleMinioError);
-    return { bucketName, objectName };
 };

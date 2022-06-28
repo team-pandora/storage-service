@@ -49,14 +49,21 @@ export const downloadFile = async (req: Request, res: Response) => {
     await promisify(stream.finished)(fileStream);
 };
 
+export const deleteFile = async (req: Request, res: Response) => {
+    const { bucketName, objectName } = req.params;
+    const result = await StorageManager.deleteFile(bucketName, objectName);
+    res.status(StatusCodes.OK).send(result);
+};
+
 export const deleteFiles = async (req: Request, res: Response) => {
-    const result = await StorageManager.deleteFiles(req.params.bucketName, req.body.objectsList);
+    const result = await StorageManager.deleteFiles(req.params.bucketName, req.body.objectNames);
     res.status(StatusCodes.OK).send(result);
 };
 
 export const copyFile = async (req: Request, res: Response) => {
-    const { bucketName, objectName, sourceBucket, sourceObject } = req.body;
-    const result = await StorageManager.copyFile(bucketName, objectName, sourceBucket, sourceObject);
+    const { bucketName, objectName } = req.params;
+    const { newBucketName, newObjectName } = req.body;
+    const result = await StorageManager.copyFile(bucketName, objectName, newBucketName, newObjectName);
     res.status(StatusCodes.OK).send(result);
 };
 
@@ -69,10 +76,5 @@ export const fileExists = async (req: Request, res: Response) => {
 export const statFile = async (req: Request, res: Response) => {
     const { bucketName, objectName } = req.params;
     const result = await StorageManager.statFile(bucketName, objectName);
-    res.status(StatusCodes.OK).send(result);
-};
-
-export const deleteFile = async (req: Request, res: Response) => {
-    const result = await StorageManager.deleteFile(req.params.bucketName, req.params.objectName);
     res.status(StatusCodes.OK).send(result);
 };
