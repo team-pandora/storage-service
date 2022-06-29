@@ -1,9 +1,37 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 import * as fs from 'fs';
+import { StatusCodes } from 'http-status-codes';
 import * as request from 'supertest';
 import Server from '../src/express/server';
-import * as StorageManager from '../src/express/storage/manager';
+import logger from '../src/utils/logger';
+import { minioClient } from '../src/utils/minio/client';
 
 jest.setTimeout(30000);
+
+const listMinioObjects = (bucketName: string) =>
+    new Promise<string[]>((resolve, reject) => {
+        const objects: string[] = [];
+        const stream = minioClient.listObjects(bucketName, '', true);
+
+        stream.on('data', (obj) => objects.push(obj.name));
+        stream.on('error', reject);
+        stream.on('end', () => {
+            resolve(objects);
+        });
+    });
+
+const deleteAllMinioObjects = async () => {
+    try {
+        const buckets = await minioClient.listBuckets();
+        for (const bucket of buckets) {
+            const objects = await listMinioObjects(bucket.name);
+            if (objects.length) await minioClient.removeObjects(bucket.name, objects);
+        }
+    } catch (err) {
+        logger.log('error', 'Failed to delete all minio objects.', err);
+    }
+};
 
 describe('Storage Service', () => {
     let app: Express.Application;
@@ -12,92 +40,171 @@ describe('Storage Service', () => {
         app = Server.createExpressApp();
     });
 
-    const bucketId = 'dd6eb23d7d977568c854b326';
-    const KeyId = 'ab6eb23d7d977568c854b326';
-    const newBucket = 'f56eb23d7d977568c854b326';
-    const newKey = 'a56eb23d7d977568c854b326';
+    const bucketName = 'dd6eb23d7d977568c854b326';
+    const objectName = 'ab6eb23d7d977568c854b326';
+    const newBucketName = 'f56eb23d7d977568c854b326';
+    const newObjectName = 'a56eb23d7d977568c854b326';
 
     afterEach(async () => {
-        StorageManager.deleteFiles(bucketId, [KeyId]);
+        await deleteAllMinioObjects();
     });
 
-    describe('api/storage', () => {
-        describe('POST', () => {
-            it('should upload file with status code 200', async () => {
-                const result = await request(app)
-                    .post(`/api/storage/bucket/${bucketId}/key/${KeyId}`)
-                    .set('Content-Type', 'multipart/form-data')
-                    .field('file', fs.createReadStream('./tests/test.txt'));
-                expect(result.status).toEqual(200);
-            });
-            it('should fail uploading file', async () => {
-                const result = await request(app).post(`/api/storage/bucket/${bucketId}/key/${KeyId}`);
-                expect(result.status).toEqual(400);
+    describe('Upload', () => {
+        it('should upload file', async () => {
+            const result = await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .set('Content-Type', 'multipart/form-data')
+                .field('file', fs.createReadStream('./tests/test.txt'))
+                .expect(StatusCodes.OK);
+
+            expect(result.body).toEqual({ bucketName, objectName, size: fs.statSync('./tests/test.txt').size });
+        });
+
+        it('should fail uploading file', async () => {
+            await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .expect(StatusCodes.BAD_REQUEST);
+        });
+    });
+
+    describe('Download', () => {
+        it('should download file', async () => {
+            await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .set('Content-Type', 'multipart/form-data')
+                .field('file', fs.createReadStream('./tests/test.txt'))
+                .expect(StatusCodes.OK);
+
+            const result = await request(app)
+                .get(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .expect(StatusCodes.OK);
+
+            expect(result.text).toEqual(fs.readFileSync('./tests/test.txt').toString());
+        });
+
+        it('fail downloading file, file does not exist', async () => {
+            await request(app)
+                .get(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .expect(StatusCodes.NOT_FOUND);
+        });
+    });
+
+    describe('Delete', () => {
+        it('should delete file', async () => {
+            await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .set('Content-Type', 'multipart/form-data')
+                .field('file', fs.createReadStream('./tests/test.txt'))
+                .expect(StatusCodes.OK);
+
+            const result = await request(app)
+                .delete(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .expect(StatusCodes.OK);
+
+            expect(result.body).toEqual({ bucketName, objectName });
+        });
+
+        it('should delete two files', async () => {
+            await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .set('Content-Type', 'multipart/form-data')
+                .field('file', fs.createReadStream('./tests/test.txt'))
+                .expect(StatusCodes.OK);
+
+            await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${newObjectName}`)
+                .set('Content-Type', 'multipart/form-data')
+                .field('file', fs.createReadStream('./tests/test.txt'))
+                .expect(StatusCodes.OK);
+
+            const result = await request(app)
+                .delete(`/api/storage/bucket/${bucketName}`)
+                .send({
+                    objectNames: [objectName, newObjectName],
+                })
+                .expect(StatusCodes.OK);
+
+            expect(result.body).toEqual({
+                bucketName,
+                objectNames: [objectName, newObjectName],
             });
         });
 
-        describe('GET', () => {
-            it('should download file with status code 200', async () => {
-                await StorageManager.uploadFile(bucketId, KeyId, fs.createReadStream('./tests/test.txt'));
-                const result = await request(app).get(`/api/storage/bucket/${bucketId}/key/${KeyId}`);
-                expect(result.status).toEqual(200);
-            });
-            it('should return 404 if file does not exist', async () => {
-                const result = await request(app).get(`/api/storage/bucket/${bucketId}/key/${KeyId}`);
-                expect(result.status).toEqual(404);
-            });
+        it('should fail validation for unknown fields', async () => {
+            await request(app)
+                .delete(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .send({ invalidField: 'some value' })
+                .expect(StatusCodes.BAD_REQUEST);
+        });
+    });
+
+    describe('Copy', () => {
+        it('should copy file', async () => {
+            await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .set('Content-Type', 'multipart/form-data')
+                .field('file', fs.createReadStream('./tests/test.txt'))
+                .expect(StatusCodes.OK);
+
+            const result = await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}/copy`)
+                .send({ newBucketName, newObjectName })
+                .expect(StatusCodes.OK);
+
+            expect(result.body).toEqual({ bucketName: newBucketName, objectName: newObjectName });
         });
 
-        describe('DELETE', () => {
-            it('should delete file with status code 200', async () => {
-                await StorageManager.uploadFile(bucketId, KeyId, fs.createReadStream('./tests/test.txt'));
-                return request(app)
-                    .delete(`/api/storage/bucket/${bucketId}`)
-                    .send({ key: [KeyId] })
-                    .expect(200);
-            });
-            it('should fail validation for unknown fields', () => {
-                return request(app)
-                    .delete(`/api/storage/bucket/${bucketId}`)
-                    .send({ invalidField: 'some value' })
-                    .expect(400);
-            });
+        it('should fail copying file', async () => {
+            await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}/copy`)
+                .send({ newBucketName, newObjectName })
+                .expect(StatusCodes.NOT_FOUND);
+        });
+    });
+
+    describe('Exists', () => {
+        it('should return true', async () => {
+            await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .set('Content-Type', 'multipart/form-data')
+                .field('file', fs.createReadStream('./tests/test.txt'))
+                .expect(StatusCodes.OK);
+
+            const result = await request(app)
+                .get(`/api/storage/bucket/${bucketName}/object/${objectName}/exists`)
+                .expect(StatusCodes.OK);
+
+            expect(result.body).toEqual(true);
         });
 
-        describe('POST', () => {
-            it('should copy file with status code 200', async () => {
-                await StorageManager.uploadFile(bucketId, KeyId, fs.createReadStream('./tests/test.txt'));
-                return request(app)
-                    .post(`/api/storage/copy`)
-                    .send({ sourceBucket: bucketId, sourceKey: KeyId, newBucket, newKey })
-                    .expect(200);
-            });
-            it('should fail copying file with status code 404', async () => {
-                return request(app)
-                    .post(`/api/storage/copy`)
-                    .send({ sourceBucket: bucketId, sourceKey: KeyId, newBucket, newKey })
-                    .expect(404);
-            });
+        it('should return false', async () => {
+            const result = await request(app)
+                .get(`/api/storage/bucket/${bucketName}/object/${objectName}/exists`)
+                .expect(StatusCodes.OK);
+
+            expect(result.body).toEqual(false);
+        });
+    });
+
+    describe('Stat', () => {
+        it('should return file stats', async () => {
+            await request(app)
+                .post(`/api/storage/bucket/${bucketName}/object/${objectName}`)
+                .set('Content-Type', 'multipart/form-data')
+                .field('file', fs.createReadStream('./tests/test.txt'))
+                .expect(StatusCodes.OK);
+
+            const result = await request(app)
+                .get(`/api/storage/bucket/${bucketName}/object/${objectName}/stat`)
+                .expect(StatusCodes.OK);
+
+            expect(result.body).toMatchObject({ size: fs.statSync('./tests/test.txt').size });
         });
 
-        describe('GET', () => {
-            it('should return 200 if file exists or if file does not exist', async () => {
-                await StorageManager.uploadFile(bucketId, KeyId, fs.createReadStream('./tests/test.txt'));
-                const result = await request(app).get(`/api/storage/exists/bucket/${bucketId}/key/${KeyId}`);
-                expect(result.status).toEqual(200);
-            });
-        });
-
-        describe('GET', () => {
-            it('should return file stats with status code 200', async () => {
-                await StorageManager.uploadFile(bucketId, KeyId, fs.createReadStream('./tests/test.txt'));
-                const result = await request(app).get(`/api/storage/stat/bucket/${bucketId}/key/${KeyId}`);
-                expect(result.status).toEqual(200);
-            });
-            it('should fail returning file stats with status code 404', async () => {
-                const result = await request(app).get(`/api/storage/stat/bucket/${bucketId}/key/${KeyId}`);
-                expect(result.status).toEqual(404);
-            });
+        it('should fail returning file stats', async () => {
+            await request(app)
+                .get(`/api/storage/bucket/${bucketName}/object/${objectName}/stat`)
+                .expect(StatusCodes.NOT_FOUND);
         });
     });
 });

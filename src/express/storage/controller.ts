@@ -6,19 +6,20 @@ import { promisify } from 'util';
 import { ServerError } from '../error';
 import * as StorageManager from './manager';
 
-const uploadFile = async (req: Request, res: Response) => {
-    const { bucket, key } = req.params;
+export const uploadFile = async (req: Request, res: Response) => {
+    const { bucketName, objectName } = req.params;
 
     const result = await new Promise((resolve, reject) => {
         const busboy = Busboy({ headers: req.headers });
         let fileUpload: Promise<{
-            bucket: string;
-            key: string;
+            bucketName: string;
+            objectName: string;
+            size: number;
         }>;
 
         busboy.on('file', (field, file) => {
             if (field === 'file' && !fileUpload) {
-                fileUpload = StorageManager.uploadFile(bucket, key, file).catch(reject) as typeof fileUpload;
+                fileUpload = StorageManager.uploadFile(bucketName, objectName, file).catch(reject) as typeof fileUpload;
             } else {
                 file.resume();
             }
@@ -39,36 +40,41 @@ const uploadFile = async (req: Request, res: Response) => {
     res.status(StatusCodes.OK).send(result);
 };
 
-const downloadFile = async (req: Request, res: Response) => {
-    const { bucket, key } = req.params;
-    const fileStream = await StorageManager.downloadFile(bucket, key);
+export const downloadFile = async (req: Request, res: Response) => {
+    const { bucketName, objectName } = req.params;
+    const fileStream = await StorageManager.downloadFile(bucketName, objectName);
 
     fileStream.pipe(res);
 
     await promisify(stream.finished)(fileStream);
 };
 
-const deleteFiles = async (req: Request, res: Response) => {
-    const result = await StorageManager.deleteFiles(req.params.bucket, req.body.key);
+export const deleteFile = async (req: Request, res: Response) => {
+    const { bucketName, objectName } = req.params;
+    const result = await StorageManager.deleteFile(bucketName, objectName);
     res.status(StatusCodes.OK).send(result);
 };
 
-const copyFile = async (req: Request, res: Response) => {
-    const { sourceBucket, sourceKey, newBucket, newKey } = req.body;
-    const result = await StorageManager.copyFile(sourceBucket, sourceKey, newBucket, newKey);
+export const deleteFiles = async (req: Request, res: Response) => {
+    const result = await StorageManager.deleteFiles(req.params.bucketName, req.body.objectNames);
     res.status(StatusCodes.OK).send(result);
 };
 
-const fileExists = async (req: Request, res: Response) => {
-    const { bucket, key } = req.params;
-    const result = await StorageManager.fileExists(bucket, key);
+export const copyFile = async (req: Request, res: Response) => {
+    const { bucketName, objectName } = req.params;
+    const { newBucketName, newObjectName } = req.body;
+    const result = await StorageManager.copyFile(bucketName, objectName, newBucketName, newObjectName);
     res.status(StatusCodes.OK).send(result);
 };
 
-const statFile = async (req: Request, res: Response) => {
-    const { bucket, key } = req.params;
-    const result = await StorageManager.statFile(bucket, key);
+export const fileExists = async (req: Request, res: Response) => {
+    const { bucketName, objectName } = req.params;
+    const result = await StorageManager.fileExists(bucketName, objectName);
     res.status(StatusCodes.OK).send(result);
 };
 
-export { uploadFile, downloadFile, deleteFiles, copyFile, fileExists, statFile };
+export const statFile = async (req: Request, res: Response) => {
+    const { bucketName, objectName } = req.params;
+    const result = await StorageManager.statFile(bucketName, objectName);
+    res.status(StatusCodes.OK).send(result);
+};

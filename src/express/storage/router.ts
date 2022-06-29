@@ -7,34 +7,44 @@ import * as ValidatorSchemas from './validator.schema';
 const featureRouter: Router = Router();
 
 featureRouter.post(
-    '/bucket/:bucket/key/:key',
-    ValidateRequest(ValidatorSchemas.UploadSchema),
+    '/bucket/:bucketName/object/:objectName',
+    ValidateRequest(ValidatorSchemas.UploadFileRequestSchema),
     wrapController(FeatureController.uploadFile),
 );
 
 featureRouter.get(
-    '/bucket/:bucket/key/:key',
-    ValidateRequest(ValidatorSchemas.DefaultSchema),
+    '/bucket/:bucketName/object/:objectName',
+    ValidateRequest(ValidatorSchemas.FileExistsRequestSchema),
     wrapController(FeatureController.downloadFile),
 );
 
 featureRouter.delete(
-    '/bucket/:bucket',
-    ValidateRequest(ValidatorSchemas.DeleteSchema),
+    '/bucket/:bucketName/object/:objectName',
+    ValidateRequest(ValidatorSchemas.DeleteFileRequestSchema),
+    wrapController(FeatureController.deleteFile),
+);
+
+featureRouter.delete(
+    '/bucket/:bucketName',
+    ValidateRequest(ValidatorSchemas.DeleteFilesRequestSchema),
     wrapController(FeatureController.deleteFiles),
 );
 
-featureRouter.post('/copy', ValidateRequest(ValidatorSchemas.CopySchema), wrapController(FeatureController.copyFile));
+featureRouter.post(
+    '/bucket/:bucketName/object/:objectName/copy',
+    ValidateRequest(ValidatorSchemas.CopyFileRequestSchema),
+    wrapController(FeatureController.copyFile),
+);
 
 featureRouter.get(
-    '/exists/bucket/:bucket/key/:key',
-    ValidateRequest(ValidatorSchemas.DefaultSchema),
+    '/bucket/:bucketName/object/:objectName/exists',
+    ValidateRequest(ValidatorSchemas.FileExistsRequestSchema),
     wrapController(FeatureController.fileExists),
 );
 
 featureRouter.get(
-    '/stat/bucket/:bucket/key/:key',
-    ValidateRequest(ValidatorSchemas.DefaultSchema),
+    '/bucket/:bucketName/object/:objectName/stat',
+    ValidateRequest(ValidatorSchemas.StatFileRequestSchema),
     wrapController(FeatureController.statFile),
 );
 
