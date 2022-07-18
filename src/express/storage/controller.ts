@@ -31,7 +31,7 @@ export const uploadFile = async (req: Request, res: Response) => {
 
         busboy.on('finish', () => {
             if (!fileUpload) reject(new ServerError(StatusCodes.BAD_REQUEST, 'No file provided'));
-            else fileUpload.then(resolve).catch(reject);
+            else fileUpload.then(resolve);
         });
 
         req.pipe(busboy);
